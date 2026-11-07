@@ -6,6 +6,7 @@
     "build": "node build.mjs"
   },
   "devDependencies": {
+    "javascript-obfuscator": "^4.2.2",
     "terser": "^5.51.2"
   }
 }

@@ -44,6 +44,9 @@ package.json                # Development dependencies
 
 複数のリソースからURL リストを取得します。
 
+- 取得先: GitHub Raw / jsDelivr / Statically / esm.sh / raw.githack.com / githubraw.com
+- Auto（デフォルト）は GitHub Raw を優先し、失敗時に他の取得先へ順番にフォールバック
+- 設定から単一の取得先を指定することも可能
 - 各 URL を iframe で順次検証
 - 最初に正常に利用できた URL を自動選択
 
@@ -82,14 +85,20 @@ node build.mjs
 
 ## ✦ Build Pipeline
 
-本番ビルドでは Terser による JavaScript の minify と、CSS のインライン化を行います。
+本番ビルドでは Terser による JavaScript の minify と、**軽度の難読化**、CSS のインライン化を行います。
 
-- Bootstrap の CSS を HTML にインライン化（JS は minify してインライン化）
-- Liquid Glass は独立した `public/liquid-glass.js` として minify 出力
-- メインアプリケーションのインライン JS を minify
+- Terser による minify（コメント削除・圧縮・識別子短縮）
+- javascript-obfuscator による軽度な難読化
+  - 文字列の一部を Base64 配列に退避
+  - 識別子を 16 進数名に置換（グローバル名は維持）
+  - 制御フロー変換・デッドコード挿入・自己防御は無効（軽量・安全重視）
+  - `seed` 固定で再現性のあるビルド
+- Bootstrap の CSS を HTML にインライン化（JS は minify + 難読化してインライン化）
+- Liquid Glass は独立した `public/liquid-glass.js` として minify + 難読化
+- メインアプリケーションのインライン JS を minify + 難読化
 - Base64 形式でアプリケーションを出力
 - `public/` 以下に配布用ファイルを生成
 
 ---
 
-<center><i>Made with ❤️ by [@zenith-kamo](https://github.com/zenith-kamo)</i></center>
+<i>Made with ❤️ by [@zenith-kamo](https://github.com/zenith-kamo)</i>

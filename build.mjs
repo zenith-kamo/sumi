@@ -5,6 +5,7 @@
 // 実行: node build.mjs
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { minify } from 'terser';
+import JavaScriptObfuscator from 'javascript-obfuscator';
 
 const root = new URL('./', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
@@ -20,20 +21,53 @@ async function minifyJs(code, name) {
   return result.code;
 }
 
-/** インライン <script> ブロックをすべて minify する */
+/** 軽度の難読化: 文字列の一部を Base64 配列に退避し、識別子を短縮する */
+function obfuscateJs(code, name) {
+  try {
+    return JavaScriptObfuscator.obfuscate(code, {
+      compact: true,
+      target: 'browser',
+      seed: 12345,
+      identifierNamesGenerator: 'hexadecimal',
+      renameGlobals: false,
+      controlFlowFlattening: false,
+      deadCodeInjection: false,
+      selfDefending: false,
+      debugProtection: false,
+      disableConsoleOutput: false,
+      stringArray: true,
+      stringArrayThreshold: 0.3,
+      stringArrayEncoding: ['base64'],
+      stringArrayRotate: false,
+      stringArrayShuffle: false,
+      splitStrings: false,
+      simplify: true,
+      unicodeEscapeSequence: false,
+    }).getObfuscatedCode();
+  } catch (error) {
+    throw new Error(`${name}: 難読化に失敗しました (${error.message})`);
+  }
+}
+
+/** terser で minify したあと、軽度の難読化を施す */
+async function buildJs(code, name) {
+  return obfuscateJs(await minifyJs(code, name), name);
+}
+
+/** インライン <script> ブロックをすべて minify + 難読化する */
 async function minifyInlineScripts(html, name) {
   const blocks = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
   let output = html;
   for (let index = 0; index < blocks.length; index++) {
-    const code = await minifyJs(blocks[index][1], `${name} script #${index + 1}`);
+    const code = await buildJs(blocks[index][1], `${name} script #${index + 1}`);
     output = output.replace(blocks[index][0], () => `<script>${code}</script>`);
   }
   return output;
 }
 
 async function build() {
-  const liquidGlass = await minifyJs(read('src/liquid-glass.js'), 'liquid-glass.js');
-  const bootstrapJs = await minifyJs(read('src/script.js'), 'script.js');
+  const liquidGlass = await buildJs(read('src/liquid-glass.js'), 'liquid-glass.js');
+  const bootstrapJs = await buildJs(read('src/script.js'), 'script.js');
   const css = read('src/style.css');
 
   // 1) Liquid Glass は独立した minify 済みファイルとして配信

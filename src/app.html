@@ -397,19 +397,28 @@ const SERVICES = [
   { id: 'opium', name: 'Opium', icon: './img/opium.png' },
 ];
 
-const RAW_BASE = 'https://raw.githubusercontent.com/zenith-kamo/sumi/refs/heads/main/link/';
-const CDN_BASE = 'https://cdn.jsdelivr.net/gh/zenith-kamo/sumi@main/link/';
+const REPO = 'zenith-kamo/sumi';
+const BRANCH = 'main';
+const LIST_DIR = 'link';
 const PROBE_TIMEOUT_MS = 12000;
 
 const URL_PROVIDERS = {
-  github:   { label: 'GitHub Raw', listUrl: (service) => RAW_BASE + service.id + '.txt' },
-  jsdelivr: { label: 'jsDelivr',   listUrl: (service) => CDN_BASE + service.id + '.txt' },
+  github:     { label: 'GitHub Raw',       listUrl: (service) => `https://raw.githubusercontent.com/${REPO}/refs/heads/${BRANCH}/${LIST_DIR}/${service.id}.txt` },
+  statically: { label: 'Statically',       listUrl: (service) => `https://cdn.statically.io/gh/${REPO}@${BRANCH}/${LIST_DIR}/${service.id}.txt` },
+  githack:    { label: 'raw.githack.com',  listUrl: (service) => `https://raw.githack.com/${REPO}/${BRANCH}/${LIST_DIR}/${service.id}.txt` },
+  githubraw:  { label: 'githubraw.com',    listUrl: (service) => `https://githubraw.com/${REPO}/${BRANCH}/${LIST_DIR}/${service.id}.txt` },
+  esmsh:      { label: 'esm.sh',           listUrl: (service) => `https://esm.sh/gh/${REPO}@${BRANCH}/${LIST_DIR}/${service.id}.txt` },
+  jsdelivr:   { label: 'jsDelivr',         listUrl: (service) => `https://cdn.jsdelivr.net/gh/${REPO}@${BRANCH}/${LIST_DIR}/${service.id}.txt` },
 };
 
 const SOURCES = [
-  { id: 'auto',     label: 'Auto',       desc: 'GitHub Raw を優先し、失敗時に jsDelivr へ切り替えます', providers: ['github', 'jsdelivr'] },
-  { id: 'github',   label: 'GitHub Raw', desc: 'GitHub Raw のみを使用します',                           providers: ['github'] },
-  { id: 'jsdelivr', label: 'jsDelivr',   desc: 'jsDelivr のみを使用します',                             providers: ['jsdelivr'] },
+  { id: 'auto',       label: 'Auto',            desc: 'GitHub Raw を優先し、失敗時に他の取得先へ順番に切り替えます', providers: ['github', 'statically', 'githack', 'githubraw', 'esmsh', 'jsdelivr'] },
+  { id: 'github',     label: 'GitHub Raw',      desc: 'GitHub Raw のみを使用します',                                  providers: ['github'] },
+  { id: 'jsdelivr',   label: 'jsDelivr',        desc: 'jsDelivr のみを使用します',                                    providers: ['jsdelivr'] },
+  { id: 'statically', label: 'Statically',      desc: 'cdn.statically.io のみを使用します',                           providers: ['statically'] },
+  { id: 'esmsh',      label: 'esm.sh',          desc: 'esm.sh のみを使用します',                                      providers: ['esmsh'] },
+  { id: 'githack',    label: 'raw.githack.com', desc: 'raw.githack.com のみを使用します',                             providers: ['githack'] },
+  { id: 'githubraw',  label: 'githubraw.com',   desc: 'githubraw.com のみを使用します',                               providers: ['githubraw'] },
 ];
 
 const $ = (selector) => document.querySelector(selector);
