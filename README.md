@@ -3,7 +3,7 @@
 — One launcher. Free access. Unblock.
 
 ---
-Sumi は、Shadow / RammerHead / Opium の3つのサービスへシームレスにアクセスするための、モダンなダークテーマのランチャーです。
+Sumi は、Shadow / Doge UB / Opium の3つのサービスへシームレスにアクセスするための、モダンなダークテーマのランチャーです。
 
 洗練された UI、動的な URL 解決、軽量なブートストラップ構造を採用。URL リストから利用可能なエンドポイントを自動検出し、最適な接続先を選択してサービスを起動します。
 
@@ -21,11 +21,18 @@ src/                        # Development source
 
 public/                     # Production build
 ├── index.html              # Optimized bootstrap
+├── liquid-glass.js         # Minified UI library (independent)
 ├── favicon.ico
 ├── favicon.png
+├── img/                    # Service icons
 └── obf/
     ├── index               # Base64 encoded application
     └── app                 # Base64 encoded application
+
+link/                       # URL lists served from GitHub Raw / jsDelivr
+├── shadow.txt
+├── doge.txt
+└── opium.txt
 
 build.mjs                   # Build script
 package.json                # Development dependencies
@@ -75,11 +82,11 @@ node build.mjs
 
 ## ✦ Build Pipeline
 
-本番ビルドでは Terser による JavaScript の minify と、CSS / JS のインライン化、ライブラリの結合を行います。
+本番ビルドでは Terser による JavaScript の minify と、CSS のインライン化を行います。
 
-- Bootstrap の CSS / JS を HTML にインライン化
-- メインアプリケーションとライブラリを統合
-- Terser による JavaScript の最適化
+- Bootstrap の CSS を HTML にインライン化（JS は minify してインライン化）
+- Liquid Glass は独立した `public/liquid-glass.js` として minify 出力
+- メインアプリケーションのインライン JS を minify
 - Base64 形式でアプリケーションを出力
 - `public/` 以下に配布用ファイルを生成
 

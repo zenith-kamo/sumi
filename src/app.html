@@ -392,9 +392,9 @@ const APP_HTML = (() => {
 })();
 
 const SERVICES = [
-  { id: 'shadow', name: 'Shadow' },
-  { id: 'rammerhead', name: 'RammerHead' },
-  { id: 'opium', name: 'Opium' },
+  { id: 'shadow', name: 'Shadow', icon: './img/shadow.png' },
+  { id: 'doge', name: 'Doge UB', icon: './img/doge.png' },
+  { id: 'opium', name: 'Opium', icon: './img/opium.png' },
 ];
 
 const RAW_BASE = 'https://raw.githubusercontent.com/zenith-kamo/sumi/refs/heads/main/link/';
@@ -461,7 +461,13 @@ function buildMenu() {
   for (const service of SERVICES) {
     const button = document.createElement('button');
     button.className = 'service';
-    button.innerHTML = '<span class="tile"><img src="./img/' + service.id + '.png" alt="" draggable="false" /></span><span class="service-name"></span>';
+    button.innerHTML = '<span class="tile"><img alt="" draggable="false" /></span><span class="service-name"></span>';
+    const image = button.querySelector('img');
+    image.src = service.icon;
+    image.addEventListener('error', () => {
+      image.onerror = null;
+      image.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23f4f4f6" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>');
+    });
     button.querySelector('.service-name').textContent = service.name;
     button.addEventListener('click', () => Launcher.launch(service));
     grid.appendChild(button);
