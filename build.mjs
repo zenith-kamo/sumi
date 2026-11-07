@@ -21,7 +21,7 @@ async function minifyJs(code, name) {
   return result.code;
 }
 
-/** 軽度の難読化: 文字列の一部を Base64 配列に退避し、識別子を短縮する */
+/** 中程度の難読化: 文字列配列・制御フロー変換・デッドコード挿入を組み合わせる */
 function obfuscateJs(code, name) {
   try {
     return JavaScriptObfuscator.obfuscate(code, {
@@ -30,17 +30,23 @@ function obfuscateJs(code, name) {
       seed: 12345,
       identifierNamesGenerator: 'hexadecimal',
       renameGlobals: false,
-      controlFlowFlattening: false,
-      deadCodeInjection: false,
       selfDefending: false,
       debugProtection: false,
       disableConsoleOutput: false,
       stringArray: true,
-      stringArrayThreshold: 0.3,
+      stringArrayThreshold: 0.65,
       stringArrayEncoding: ['base64'],
-      stringArrayRotate: false,
-      stringArrayShuffle: false,
-      splitStrings: false,
+      stringArrayRotate: true,
+      stringArrayShuffle: true,
+      stringArrayWrappersCount: 1,
+      stringArrayWrappersType: 'function',
+      splitStrings: true,
+      splitStringsChunkLength: 12,
+      controlFlowFlattening: true,
+      controlFlowFlatteningThreshold: 0.35,
+      deadCodeInjection: true,
+      deadCodeInjectionThreshold: 0.1,
+      numbersToExpressions: true,
       simplify: true,
       unicodeEscapeSequence: false,
     }).getObfuscatedCode();
@@ -49,7 +55,7 @@ function obfuscateJs(code, name) {
   }
 }
 
-/** terser で minify したあと、軽度の難読化を施す */
+/** terser で minify したあと、難読化を施す */
 async function buildJs(code, name) {
   return obfuscateJs(await minifyJs(code, name), name);
 }
