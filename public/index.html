@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" href="favicon.ico" sizes="any" />
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="apple-touch-icon" href="favicon.png" />
+<style>  :root {
+    --bg: #070707;
+    --fg: #f4f4f6;
+    --muted: rgba(244, 244, 246, 0.55);
+    --rim: rgba(255, 255, 255, 0.22);
+    --glass: rgba(255, 255, 255, 0.07);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Inter", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+  /* ---------- 背景 ---------- */
+  .ambient { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
+  .ambient i { position: absolute; border-radius: 50%; filter: blur(70px); }
+  .ambient i:nth-child(1) { width: 52vmax; height: 52vmax; left: -16vmax; top: -18vmax; background: #3a3a46; }
+  .ambient i:nth-child(2) { width: 44vmax; height: 44vmax; right: -14vmax; top: 28vh; background: #1f2b36; }
+  .ambient i:nth-child(3) { width: 36vmax; height: 36vmax; left: 18vw; bottom: -20vmax; background: #2e2e2e; }
+
+  /* ---------- Liquid Glass ---------- */
+  .glass {
+    position: relative;
+    isolation: isolate;
+    background: var(--glass);
+    border: 1px solid var(--rim);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+      0 12px 32px -12px rgba(0, 0, 0, 0.7);
+  }
+  .refract .glass {
+    backdrop-filter: var(--f) blur(1.5px) saturate(180%);
+    -webkit-backdrop-filter: var(--f) blur(1.5px) saturate(180%);
+  }
+  .plain .glass {
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+  }
+  .glass::before {
+    content: "";
+    position: absolute; inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(circle at var(--lx, 50%) var(--ly, 0%), rgba(255, 255, 255, 0.2), transparent 60%);
+  }
+
+  /* ---------- 表示 ---------- */
+  .orb {
+    width: 88px; height: 88px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+  }
+  .ring {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    border-top-color: var(--fg);
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    max-width: 340px;
+    padding: 24px;
+    border-radius: 24px;
+    text-align: center;
+  }
+  .error p { color: var(--muted); font-size: 0.84rem; line-height: 1.7; }
+  .solid {
+    height: 38px;
+    padding: 0 20px;
+    border-radius: 999px;
+    background: var(--fg);
+    color: #000;
+    font-size: 0.84rem;
+    font-weight: 500;
+  }
+  .ghost {
+    height: 38px;
+    padding: 0 20px;
+    border-radius: 999px;
+    border: 1px solid var(--rim);
+    font-size: 0.84rem;
+    font-weight: 500;
+  }
+  .actions { display: flex; gap: 8px; }
+  .prompt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    max-width: 340px;
+    padding: 24px;
+    border-radius: 24px;
+    text-align: center;
+  }
+  .prompt p { color: var(--muted); font-size: 0.84rem; line-height: 1.7; }</style>
+<title>Google</title>
+</head>
+<body>
+  <div class="ambient" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <div class="orb glass" id="orb">
+    <span class="ring"></span>
+  </div>
+
+  <div class="error glass" id="error-box" hidden>
+    <p id="error-msg"></p>
+    <button class="solid" id="btn-reload">再読み込み</button>
+  </div>
+<script src="liquid-glass.js"></script>
+  <script>"use strict";!function(){const t=Date.now(),e=document.getElementById("orb"),n=document.getElementById("error-box"),o=document.getElementById("error-msg"),c=document.getElementById("btn-reload");let a=null;function d(t){e.hidden=!0,a&&(a.hidden=!0),o.textContent=t,n.hidden=!1}async function r(){try{const e=await fetch("./obf/index",{cache:"no-store"});if(!e.ok)throw new Error("サーバー応答 "+e.status);const n=(await e.text()).trim();if(!/^[A-Za-z0-9+/=\s]+$/.test(n))throw new Error("取得したデータがBase64ではありません");const o=Uint8Array.from(atob(n),t=>t.charCodeAt(0));!function(e){const n=Math.max(0,3e3-(Date.now()-t));setTimeout(()=>{document.open(),document.write(e),document.close()},n)}(new TextDecoder("utf-8").decode(o))}catch(t){d("起動に失敗しました: "+(t&&t.message?t.message:t))}}document.querySelectorAll(".glass").forEach(t=>LiquidGlass.applyGlassEffect(t)),c.addEventListener("click",()=>location.reload());function l(){return function(){const t=window.open("about:blank","_blank");if(!t)return!1;try{const e=location.href.replace(/[^/]*$/,""),n="<!DOCTYPE html>\n"+document.documentElement.outerHTML.replace("<head>",()=>'<head><base href="'+e+'">').replace(/^<html([^>]*)>/,"<html$1 data-cloaked>");t.document.open(),t.document.write(n),t.document.close(),t.name="__unblock_proxy_cloaked__"}catch{return!1}return!0}()?(c.textContent="このタブを閉じる",c.onclick=()=>{try{window.close()}catch{}},d("about:blank のタブで起動しました。このタブは閉じてください。"),setTimeout(()=>{try{window.close()}catch{}},300),!0):(e.hidden=!0,function(){if(a)return void(a.hidden=!1);a=document.createElement("div"),a.className="prompt glass",a.id="cloak-prompt";const t=document.createElement("p");t.textContent="about:blank クローキングが有効です。ポップアップがブロックされたため、自動で切り替えできませんでした。";const n=document.createElement("div");n.className="actions";const o=document.createElement("button");o.className="solid",o.id="btn-cloak",o.textContent="about:blank で開く";const c=document.createElement("button");c.className="ghost",c.id="btn-plain",c.textContent="このまま続行",n.append(o,c),a.append(t,n),document.body.appendChild(a),LiquidGlass.applyGlassEffect(a),o.addEventListener("click",()=>{l()||d("ポップアップがブロックされています。このサイトのポップアップを許可してから再度お試しください。")}),c.addEventListener("click",()=>{a.hidden=!0,e.hidden=!1,r()})}(),!1)}document.documentElement.hasAttribute("data-cloaked")||!function(){try{return!0===JSON.parse(localStorage.getItem("unblock-proxy:settings")||"{}").cloaking}catch{return!1}}()?r():l()}();</script>
+</body>
+</html>

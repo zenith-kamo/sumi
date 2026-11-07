@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<link rel="icon" href="favicon.ico" sizes="any" />
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="apple-touch-icon" href="favicon.png" />
+<title>Google</title>
+<style>
+  :root {
+    --bg: #070707;
+    --fg: #f4f4f6;
+    --muted: rgba(244, 244, 246, 0.55);
+    --hairline: rgba(255, 255, 255, 0.1);
+    --rim: rgba(255, 255, 255, 0.22);
+    --glass: rgba(255, 255, 255, 0.07);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Inter", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    height: 100dvh;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; touch-action: manipulation; }
+  svg { display: block; }
+
+  .ambient { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
+  .ambient i { position: absolute; border-radius: 50%; filter: blur(70px); }
+  .ambient i:nth-child(1) { width: 52vmax; height: 52vmax; left: -16vmax; top: -18vmax; background: #3a3a46; }
+  .ambient i:nth-child(2) { width: 44vmax; height: 44vmax; right: -14vmax; top: 28vh; background: #1f2b36; }
+  .ambient i:nth-child(3) { width: 36vmax; height: 36vmax; left: 18vw; bottom: -20vmax; background: #2e2e2e; }
+
+  .glass {
+    position: relative;
+    isolation: isolate;
+    background: var(--glass);
+    border: 1px solid var(--rim);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+      0 12px 32px -12px rgba(0, 0, 0, 0.7);
+  }
+  .refract .glass {
+    backdrop-filter: var(--f) blur(1.5px) saturate(180%);
+    -webkit-backdrop-filter: var(--f) blur(1.5px) saturate(180%);
+  }
+  .plain .glass {
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+  }
+  .glass::before {
+    content: "";
+    position: absolute; inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(circle at var(--lx, 50%) var(--ly, 0%), rgba(255, 255, 255, 0.2), transparent 60%);
+  }
+
+  .press { transition: transform 0.2s cubic-bezier(0.3, 1.2, 0.5, 1), background 0.15s; }
+  .press:active { transform: scale(0.93); }
+
+  main { height: 100%; }
+  .view { display: none; height: 100%; }
+  .view.active { display: flex; }
+
+  .gear {
+    position: fixed;
+    top: 12px; right: 12px;
+    z-index: 20;
+    width: 48px; height: 48px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    color: var(--fg);
+  }
+  .gear svg { width: 19px; height: 19px; }
+
+  #view-menu { align-items: center; justify-content: center; padding: 24px; }
+  .grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 28px 40px;
+  }
+  .service {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 120px;
+    padding: 12px 8px;
+    border-radius: 24px;
+  }
+  .service:focus-visible { outline: 1px solid var(--fg); outline-offset: 2px; }
+  .tile {
+    display: block;
+    position: relative;
+    width: 96px; height: 96px;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 16px 36px -14px rgba(0, 0, 0, 0.8);
+  }
+  .tile img { width: 100%; height: 100%; object-fit: cover; display: block; user-select: none; -webkit-user-drag: none; }
+  .tile::after {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    pointer-events: none;
+  }
+  .service-name { font-size: 0.86rem; font-weight: 500; }
+  .service:active .tile { transform: scale(0.94); }
+  .service .tile { transition: transform 0.2s cubic-bezier(0.3, 1.2, 0.5, 1); }
+
+  #view-launch { flex-direction: column; position: relative; }
+  .back {
+    position: absolute;
+    top: 12px; left: 12px;
+    z-index: 5;
+    width: 48px; height: 48px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+  }
+  .back svg { width: 18px; height: 18px; }
+
+  .frame-area { position: relative; flex: 1; min-height: 0; }
+  .probe-frame {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    border: 0;
+    background: var(--bg);
+    visibility: hidden;
+    opacity: 0;
+  }
+  .probe-frame.active { visibility: visible; opacity: 1; transition: opacity 0.3s ease; }
+
+  .status {
+    position: absolute; inset: 0;
+    z-index: 2;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px;
+    padding: 24px;
+    text-align: center;
+  }
+  .pill {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px;
+    border-radius: 999px;
+    font-size: 0.84rem;
+    color: var(--muted);
+  }
+  .spin {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    border-top-color: var(--fg);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 16px;
+    max-width: 340px;
+    padding: 24px;
+    border-radius: 24px;
+  }
+  .error p { color: var(--muted); font-size: 0.84rem; line-height: 1.7; }
+  .actions { display: flex; gap: 8px; }
+
+  .btn {
+    min-height: 44px;
+    padding: 0 20px;
+    border-radius: 999px;
+    font-size: 0.86rem;
+    font-weight: 500;
+  }
+  .btn.solid { background: var(--fg); color: #000; }
+
+  .overlay {
+    position: fixed; inset: 0;
+    z-index: 50;
+    display: flex; align-items: flex-end; justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .overlay.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    width: min(460px, 100%);
+    max-height: 86dvh;
+    overflow-y: auto;
+    padding: 18px 20px 28px;
+    background: rgba(16, 16, 18, 0.94);
+    border: 1px solid var(--hairline);
+    border-bottom: 0;
+    border-radius: 28px 28px 0 0;
+    transform: translateY(16px);
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .overlay.open .sheet { transform: none; }
+  @media (min-width: 640px) {
+    .overlay { align-items: center; padding: 24px; }
+    .sheet { border-radius: 28px; border-bottom: 1px solid var(--hairline); }
+  }
+
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .sheet-head h2 { font-size: 1rem; font-weight: 600; }
+  .close { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; margin-right: -10px; }
+  .close svg { width: 16px; height: 16px; }
+
+  .group { padding: 18px 0; }
+  .group + .group { border-top: 1px solid var(--hairline); }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .label { font-size: 0.9rem; font-weight: 500; }
+  .group-title { font-size: 0.9rem; font-weight: 500; margin-bottom: 12px; }
+  .desc { margin-top: 10px; font-size: 0.76rem; line-height: 1.7; color: var(--muted); }
+  .desc code { font-family: ui-monospace, monospace; font-size: 0.72rem; color: var(--fg); }
+
+  .toggle {
+    position: relative;
+    flex: none;
+    width: 56px; height: 34px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid var(--hairline);
+    transition: background 0.25s ease;
+  }
+  .toggle::before { content: ""; position: absolute; inset: -8px -6px; }
+  .toggle[aria-checked="true"] { background: var(--fg); }
+  .toggle .knob {
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    transition: transform 0.3s cubic-bezier(0.3, 0.7, 0.3, 1), background 0.25s ease;
+  }
+  .toggle[aria-checked="true"] .knob { transform: translateX(22px); background: #0a0a0a; }
+  .toggle:focus-visible { outline: 1px solid var(--fg); outline-offset: 3px; }
+
+  .list {
+    max-height: 260px;
+    overflow-y: auto;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--hairline);
+  }
+  .opt {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    width: 100%;
+    min-height: 56px;
+    padding: 12px 16px;
+    text-align: left;
+    color: var(--muted);
+    transition: background 0.15s ease;
+  }
+  .opt + .opt { border-top: 1px solid var(--hairline); }
+  .opt:hover { background: rgba(255, 255, 255, 0.04); }
+  .opt:active { background: rgba(255, 255, 255, 0.08); }
+  .opt:focus-visible { outline: 1px solid var(--fg); outline-offset: -2px; }
+  .opt .name { display: block; color: var(--fg); font-size: 0.92rem; font-weight: 500; }
+  .opt .sub { display: block; margin-top: 3px; font-size: 0.74rem; }
+  .opt .check {
+    flex: none;
+    width: 18px; height: 18px;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .check svg { width: 18px; height: 18px; }
+  .opt[aria-checked="true"] { color: var(--fg); }
+  .opt[aria-checked="true"] .check { opacity: 1; transform: none; }
+
+  .toasts {
+    position: fixed;
+    left: 50%; bottom: 24px;
+    transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    z-index: 100;
+    pointer-events: none;
+  }
+  .toast {
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: rgba(28, 28, 30, 0.72);
+    border: 1px solid var(--rim);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.7);
+    font-size: 0.82rem;
+    max-width: min(90vw, 420px);
+    animation: toastIn 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  .toast.out { animation: toastOut 0.2s ease both; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } }
+  @keyframes toastOut { to { opacity: 0; transform: translateY(6px); } }
+</style>
+</head>
+<body>
+  <div class="ambient" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <button class="gear glass press" id="btn-settings" aria-label="設定を開く" title="設定">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.9 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9c.36.62.99 1 1.56 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1Z"/>
+    </svg>
+  </button>
+
+  <main>
+    <section class="view active" id="view-menu" aria-label="メインメニュー">
+      <div class="grid" id="service-grid"></div>
+    </section>
+
+    <section class="view" id="view-launch" aria-label="サービス起動">
+      <button class="back glass press" id="btn-back" aria-label="メニューに戻る" title="メニューに戻る">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      </button>
+      <div class="frame-area" id="frame-area">
+        <div class="status" id="launch-status">
+          <div class="pill glass" id="status-pill">
+            <span class="spin"></span>
+            <span id="status-text"></span>
+          </div>
+          <div class="error glass" id="error-box" hidden>
+            <p id="error-message"></p>
+            <div class="actions">
+              <button class="btn solid press" id="btn-retry">再試行</button>
+              <button class="btn glass press" id="btn-error-back">戻る</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="overlay" id="settings" role="dialog" aria-modal="true" aria-label="設定">
+    <div class="sheet">
+      <div class="sheet-head">
+        <h2>設定</h2>
+        <button class="close press" id="btn-close-settings" aria-label="設定を閉じる">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M6 6l12 12M18 6L6 18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="group">
+        <div class="row">
+          <span class="label" id="cloak-label">about:blank クローキング</span>
+          <button class="toggle" id="toggle-cloak" role="switch" aria-checked="false" aria-labelledby="cloak-label">
+            <span class="knob"></span>
+          </button>
+        </div>
+        <p class="desc">
+          有効にすると、このアプリが新しいタブの <code>about:blank</code> で開き、アドレスバーにURLやサイト名が表示されなくなります。
+          ポップアップが表示された場合は許可してください。元のタブは手動で閉じてください。
+        </p>
+      </div>
+
+      <div class="group">
+        <div class="group-title">URLリストの取得先</div>
+        <div class="list" id="source-list" role="radiogroup" aria-label="URLリストの取得先"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toasts" id="toast-wrap" aria-live="polite"></div>
+
+<script src="liquid-glass.js"></script>
+<script>
+'use strict';
+
+const APP_HTML = (() => {
+  const baseHref = location.href.replace(/[^/]*$/, '');
+  const html = document.documentElement.outerHTML;
+  return '<!DOCTYPE html>\n' + html
+    .replace('<head>', () => '<head><base href="' + baseHref + '">')
+    .replace(/^<html([^>]*)>/, '<html$1 data-cloaked>');
+})();
+
+const SERVICES = [
+  { id: 'shadow', name: 'Shadow' },
+  { id: 'rammerhead', name: 'RammerHead' },
+  { id: 'opium', name: 'Opium' },
+];
+
+const RAW_BASE = 'https://raw.githubusercontent.com/zenith-kamo/sumi/refs/heads/main/link/';
+const CDN_BASE = 'https://cdn.jsdelivr.net/gh/zenith-kamo/sumi@main/link/';
+const PROBE_TIMEOUT_MS = 12000;
+
+const URL_PROVIDERS = {
+  github:   { label: 'GitHub Raw', listUrl: (service) => RAW_BASE + service.id + '.txt' },
+  jsdelivr: { label: 'jsDelivr',   listUrl: (service) => CDN_BASE + service.id + '.txt' },
+};
+
+const SOURCES = [
+  { id: 'auto',     label: 'Auto',       desc: 'GitHub Raw を優先し、失敗時に jsDelivr へ切り替えます', providers: ['github', 'jsdelivr'] },
+  { id: 'github',   label: 'GitHub Raw', desc: 'GitHub Raw のみを使用します',                           providers: ['github'] },
+  { id: 'jsdelivr', label: 'jsDelivr',   desc: 'jsDelivr のみを使用します',                             providers: ['jsdelivr'] },
+];
+
+const $ = (selector) => document.querySelector(selector);
+const CHECK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
+const Store = {
+  KEY: 'unblock-proxy:settings',
+  defaults: { source: 'auto', cloaking: false },
+  data: null,
+  load() {
+    try {
+      return { ...this.defaults, ...(JSON.parse(localStorage.getItem(this.KEY)) || {}) };
+    } catch {
+      return { ...this.defaults };
+    }
+  },
+  save(patch) {
+    Object.assign(this.data, patch);
+    try { localStorage.setItem(this.KEY, JSON.stringify(this.data)); } catch {}
+  },
+};
+Store.data = Store.load();
+const settings = Store.data;
+
+function currentSource() {
+  return SOURCES.find((source) => source.id === settings.source) || SOURCES[0];
+}
+
+const UI = {
+  views: { menu: $('#view-menu'), launch: $('#view-launch') },
+  showView(name) {
+    for (const view of Object.values(this.views)) view.classList.remove('active');
+    this.views[name].classList.add('active');
+  },
+  toast(message) {
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = message;
+    $('#toast-wrap').appendChild(el);
+    setTimeout(() => {
+      el.classList.add('out');
+      el.addEventListener('animationend', () => el.remove(), { once: true });
+    }, 2600);
+  },
+};
+
+function buildMenu() {
+  const grid = $('#service-grid');
+  for (const service of SERVICES) {
+    const button = document.createElement('button');
+    button.className = 'service';
+    button.innerHTML = '<span class="tile"><img src="./img/' + service.id + '.png" alt="" draggable="false" /></span><span class="service-name"></span>';
+    button.querySelector('.service-name').textContent = service.name;
+    button.addEventListener('click', () => Launcher.launch(service));
+    grid.appendChild(button);
+  }
+}
+
+const Sources = {
+  async fetchText(url) {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.text();
+  },
+
+  parseList(text) {
+    return text.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith('#'));
+  },
+
+  async fetchList(service) {
+    let lastError = null;
+    for (const providerId of currentSource().providers) {
+      const provider = URL_PROVIDERS[providerId];
+      try {
+        const list = this.parseList(await this.fetchText(provider.listUrl(service)));
+        if (list.length > 0) return list;
+        lastError = new Error(`${provider.label}: リストが空です`);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError || new Error('URLリストを取得できませんでした');
+  },
+};
+
+const SourceList = {
+  element: $('#source-list'),
+
+  init() {
+    for (const source of SOURCES) {
+      const option = document.createElement('button');
+      option.className = 'opt';
+      option.setAttribute('role', 'radio');
+      option.dataset.id = source.id;
+      option.innerHTML = '<span><span class="name"></span><span class="sub"></span></span><span class="check">' + CHECK_ICON + '</span>';
+      option.querySelector('.name').textContent = source.label;
+      option.querySelector('.sub').textContent = source.desc;
+      option.addEventListener('click', () => this.choose(source.id));
+      this.element.appendChild(option);
+    }
+    this.element.addEventListener('keydown', (event) => this.handleKey(event));
+    this.sync();
+  },
+
+  options() {
+    return Array.from(this.element.querySelectorAll('.opt'));
+  },
+
+  sync() {
+    const selectedId = currentSource().id;
+    for (const option of this.options()) {
+      const isSelected = option.dataset.id === selectedId;
+      option.setAttribute('aria-checked', String(isSelected));
+      option.tabIndex = isSelected ? 0 : -1;
+    }
+  },
+
+  choose(id) {
+    if (currentSource().id === id) return;
+    Store.save({ source: id });
+    this.sync();
+    UI.toast('取得先: ' + currentSource().label);
+  },
+
+  handleKey(event) {
+    const options = this.options();
+    const currentIndex = options.findIndex((option) => option.getAttribute('aria-checked') === 'true');
+    let nextIndex = null;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % options.length;
+    if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + options.length) % options.length;
+    if (nextIndex === null) return;
+
+    event.preventDefault();
+    this.choose(options[nextIndex].dataset.id);
+    options[nextIndex].focus();
+  },
+};
+
+const Launcher = {
+  current: null,
+  busy: false,
+  sessionId: 0,
+  elements: {
+    status: $('#launch-status'),
+    pill: $('#status-pill'),
+    text: $('#status-text'),
+    error: $('#error-box'),
+    errorMessage: $('#error-message'),
+    area: $('#frame-area'),
+  },
+
+  showStatus(text) {
+    this.elements.status.hidden = false;
+    this.elements.pill.hidden = false;
+    this.elements.error.hidden = true;
+    this.elements.text.textContent = text;
+  },
+
+  showError(message) {
+    this.busy = false;
+    this.elements.pill.hidden = true;
+    this.elements.error.hidden = false;
+    this.elements.errorMessage.textContent = message;
+  },
+
+  clearFrames() {
+    this.elements.area.querySelectorAll('iframe').forEach((frame) => frame.remove());
+  },
+
+  async launch(service) {
+    if (this.busy) return;
+    this.current = service;
+    this.busy = true;
+    const session = ++this.sessionId;
+
+    this.clearFrames();
+    UI.showView('launch');
+    this.showStatus(service.name + ' を準備しています');
+
+    let urls;
+    try {
+      urls = await Sources.fetchList(service);
+    } catch (error) {
+      this.showError('URLリストの取得に失敗しました。ネットワーク接続を確認するか、取得先を変更してください。(' + error.message + ')');
+      return;
+    }
+
+    for (let index = 0; index < urls.length; index++) {
+      if (session !== this.sessionId) return;
+      this.showStatus('接続中… ' + (index + 1) + ' / ' + urls.length);
+
+      try {
+        const frame = await this.probeIframe(urls[index]);
+        if (session !== this.sessionId) {
+          frame.remove();
+          return;
+        }
+        this.elements.area.querySelectorAll('iframe').forEach((other) => { if (other !== frame) other.remove(); });
+        frame.classList.add('active');
+        this.elements.status.hidden = true;
+        this.busy = false;
+        return;
+      } catch {}
+    }
+
+    if (session === this.sessionId) {
+      this.showError('すべてのURLの読み込みに失敗しました。リストのURLが利用不可になっている可能性があります。');
+    }
+  },
+
+  probeIframe(url) {
+    return new Promise((resolve, reject) => {
+      const frame = document.createElement('iframe');
+      frame.className = 'probe-frame';
+      frame.src = url;
+      frame.allow = 'fullscreen; clipboard-read; clipboard-write';
+
+      let settled = false;
+      const settle = (ok) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        frame.removeEventListener('load', onLoad);
+        frame.removeEventListener('error', onError);
+        if (ok) {
+          resolve(frame);
+        } else {
+          frame.remove();
+          reject(new Error('load failed: ' + url));
+        }
+      };
+      const onLoad = () => setTimeout(() => settle(true), 350);
+      const onError = () => settle(false);
+      const timer = setTimeout(() => settle(false), PROBE_TIMEOUT_MS);
+
+      frame.addEventListener('load', onLoad);
+      frame.addEventListener('error', onError);
+      this.elements.area.appendChild(frame);
+    });
+  },
+
+  back() {
+    this.sessionId++;
+    this.busy = false;
+    this.clearFrames();
+    UI.showView('menu');
+  },
+};
+
+const Cloak = {
+  open() {
+    const win = window.open('about:blank', '_blank');
+    if (!win) return false;
+    try {
+      win.document.open();
+      win.document.write(APP_HTML);
+      win.document.close();
+      win.name = '__unblock_proxy_cloaked__';
+    } catch {
+      return false;
+    }
+    return true;
+  },
+};
+
+const cloakToggle = $('#toggle-cloak');
+
+function setCloakUI(isOn) {
+  cloakToggle.setAttribute('aria-checked', String(isOn));
+}
+
+cloakToggle.addEventListener('click', () => {
+  const nextIsOn = cloakToggle.getAttribute('aria-checked') !== 'true';
+
+  if (!nextIsOn) {
+    Store.save({ cloaking: false });
+    setCloakUI(false);
+    UI.toast('次の起動から通常のタブで開きます');
+    return;
+  }
+
+  if (!Cloak.open()) {
+    setCloakUI(false);
+    Store.save({ cloaking: false });
+    UI.toast('ポップアップがブロックされました。許可してから再度お試しください');
+    return;
+  }
+
+  Store.save({ cloaking: true });
+  setCloakUI(true);
+  UI.toast('about:blank で開きました。次回起動時も自動で切り替わります');
+});
+
+const Settings = {
+  overlay: $('#settings'),
+  open() {
+    SourceList.sync();
+    setCloakUI(settings.cloaking);
+    this.overlay.classList.add('open');
+  },
+  close() {
+    this.overlay.classList.remove('open');
+  },
+  init() {
+    $('#btn-settings').addEventListener('click', () => this.open());
+    $('#btn-close-settings').addEventListener('click', () => this.close());
+    this.overlay.addEventListener('click', (event) => { if (event.target === this.overlay) this.close(); });
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') this.close(); });
+  },
+};
+
+function init() {
+  buildMenu();
+  SourceList.init();
+  Settings.init();
+
+  $('#btn-back').addEventListener('click', () => Launcher.back());
+  $('#btn-error-back').addEventListener('click', () => Launcher.back());
+  $('#btn-retry').addEventListener('click', () => { if (Launcher.current) Launcher.launch(Launcher.current); });
+
+  document.querySelectorAll('.glass').forEach((element) => LiquidGlass.applyGlassEffect(element));
+}
+init();
+</script>
+</body>
+</html>
