@@ -85,7 +85,7 @@ node build.mjs
 
 ## ✦ Build Pipeline
 
-本番ビルドでは Terser による JavaScript の minify と、**軽度の難読化**、CSS のインライン化を行います。
+本番ビルドでは Terser による JavaScript の minify と、軽度の難読化、CSS のインライン化を行います。
 
 - Terser による minify（コメント削除・圧縮・識別子短縮）
 - javascript-obfuscator による軽度な難読化

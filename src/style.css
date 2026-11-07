@@ -5,9 +5,24 @@
     --rim: rgba(255, 255, 255, 0.22);
     --glass: rgba(255, 255, 255, 0.07);
   }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  [hidden] { display: none !important; }
-  html, body { height: 100%; }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
   body {
     font-family: "Inter", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
     background: var(--bg);
@@ -18,14 +33,52 @@
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
   }
-  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+  button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
 
   /* ---------- 背景 ---------- */
-  .ambient { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
-  .ambient i { position: absolute; border-radius: 50%; filter: blur(70px); }
-  .ambient i:nth-child(1) { width: 52vmax; height: 52vmax; left: -16vmax; top: -18vmax; background: #3a3a46; }
-  .ambient i:nth-child(2) { width: 44vmax; height: 44vmax; right: -14vmax; top: 28vh; background: #1f2b36; }
-  .ambient i:nth-child(3) { width: 36vmax; height: 36vmax; left: 18vw; bottom: -20vmax; background: #2e2e2e; }
+  .ambient {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+  }
+
+  .ambient i {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(70px);
+  }
+
+  .ambient i:nth-child(1) {
+    width: 52vmax;
+    height: 52vmax;
+    left: -16vmax;
+    top: -18vmax;
+    background: #3a3a46;
+  }
+
+  .ambient i:nth-child(2) {
+    width: 44vmax;
+    height: 44vmax;
+    right: -14vmax;
+    top: 28vh;
+    background: #1f2b36;
+  }
+
+  .ambient i:nth-child(3) {
+    width: 36vmax;
+    height: 36vmax;
+    left: 18vw;
+    bottom: -20vmax;
+    background: #2e2e2e;
+  }
 
   /* ---------- Liquid Glass ---------- */
   .glass {
@@ -38,17 +91,21 @@
       inset 0 -1px 0 rgba(0, 0, 0, 0.25),
       0 12px 32px -12px rgba(0, 0, 0, 0.7);
   }
+
   .refract .glass {
     backdrop-filter: var(--f) blur(1.5px) saturate(180%);
     -webkit-backdrop-filter: var(--f) blur(1.5px) saturate(180%);
   }
+
   .plain .glass {
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
   }
+
   .glass::before {
     content: "";
-    position: absolute; inset: 0;
+    position: absolute;
+    inset: 0;
     z-index: -1;
     border-radius: inherit;
     pointer-events: none;
@@ -57,18 +114,27 @@
 
   /* ---------- 表示 ---------- */
   .orb {
-    width: 88px; height: 88px;
+    width: 88px;
+    height: 88px;
     border-radius: 50%;
-    display: grid; place-items: center;
+    display: grid;
+    place-items: center;
   }
+
   .ring {
-    width: 26px; height: 26px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     border: 1.5px solid rgba(255, 255, 255, 0.2);
     border-top-color: var(--fg);
     animation: spin 0.9s linear infinite;
   }
-  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 
   .error {
     display: flex;
@@ -80,7 +146,13 @@
     border-radius: 24px;
     text-align: center;
   }
-  .error p { color: var(--muted); font-size: 0.84rem; line-height: 1.7; }
+
+  .error p {
+    color: var(--muted);
+    font-size: 0.84rem;
+    line-height: 1.7;
+  }
+
   .solid {
     height: 38px;
     padding: 0 20px;
@@ -90,6 +162,7 @@
     font-size: 0.84rem;
     font-weight: 500;
   }
+
   .ghost {
     height: 38px;
     padding: 0 20px;
@@ -98,7 +171,12 @@
     font-size: 0.84rem;
     font-weight: 500;
   }
-  .actions { display: flex; gap: 8px; }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+  }
+
   .prompt {
     display: flex;
     flex-direction: column;
@@ -109,4 +187,14 @@
     border-radius: 24px;
     text-align: center;
   }
-  .prompt p { color: var(--muted); font-size: 0.84rem; line-height: 1.7; }
+
+  .prompt p {
+    color: var(--muted);
+    font-size: 0.84rem;
+    line-height: 1.7;
+  }
+
+  .info {
+    font-size: 1px;
+    color: #FFFFFF00;
+  }
