@@ -1,7 +1,9 @@
 # Sumi
+<center>
+<img src="sumi.png" width="90">&emsp;<img src="sumi2.png" width="90">
 
 — One launcher. Free access. Unblock.
-
+</center>
 ---
 Sumi は、Shadow / Doge UB / Opium の3つのサービスへシームレスにアクセスするための、モダンなダークテーマのランチャーです。
 
