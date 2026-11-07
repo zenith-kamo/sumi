@@ -92,4 +92,4 @@ node build.mjs
 
 ---
 
-<i><center>Made with ❤️ by [@zenith-kamo](https://github/zenith-kamo)</center></i>
+<center><i>Made with ❤️ by [@zenith-kamo](https://github.com/zenith-kamo)</i></center>
