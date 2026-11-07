@@ -431,6 +431,7 @@ const REPO = 'zenith-kamo/sumi';
 const BRANCH = 'main';
 const LIST_DIR = 'link';
 const PROBE_TIMEOUT_MS = 12000;
+const PROBE_CONCURRENCY = 10;
 
 const URL_PROVIDERS = {
   github:     { label: 'GitHub Raw',       listUrl: (service) => `https://raw.githubusercontent.com/${REPO}/refs/heads/${BRANCH}/${LIST_DIR}/${service.id}.txt` },
@@ -597,6 +598,7 @@ const Launcher = {
   current: null,
   busy: false,
   sessionId: 0,
+  controller: null,
   elements: {
     status: $('#launch-status'),
     pill: $('#status-pill'),
@@ -630,6 +632,10 @@ const Launcher = {
     this.busy = true;
     const session = ++this.sessionId;
 
+    if (this.controller) this.controller.abort();
+    const controller = new AbortController();
+    this.controller = controller;
+
     this.clearFrames();
     UI.showView('launch');
     this.showStatus(service.name + ' を準備しています');
@@ -638,47 +644,107 @@ const Launcher = {
     try {
       urls = await Sources.fetchList(service);
     } catch (error) {
-      this.showError('URLリストの取得に失敗しました。ネットワーク接続を確認するか、取得先を変更してください。(' + error.message + ')');
+      if (session === this.sessionId) {
+        this.showError('URLリストの取得に失敗しました。ネットワーク接続を確認するか、取得先を変更してください。(' + error.message + ')');
+      }
       return;
     }
 
-    for (let index = 0; index < urls.length; index++) {
-      if (session !== this.sessionId) return;
-      this.showStatus('接続中… ' + (index + 1) + ' / ' + urls.length);
+    if (session !== this.sessionId) return;
 
-      try {
-        const frame = await this.probeIframe(urls[index]);
-        if (session !== this.sessionId) {
-          frame.remove();
-          return;
-        }
-        this.elements.area.querySelectorAll('iframe').forEach((other) => { if (other !== frame) other.remove(); });
-        frame.classList.add('active');
-        this.elements.status.hidden = true;
-        this.busy = false;
-        return;
-      } catch {}
+    let frame;
+    try {
+      frame = await this.probeFirstAvailable(urls, controller.signal);
+    } catch {
+      if (session === this.sessionId) {
+        this.showError('すべてのURLの読み込みに失敗しました。リストのURLが利用不可になっている可能性があります。');
+      }
+      return;
     }
 
-    if (session === this.sessionId) {
-      this.showError('すべてのURLの読み込みに失敗しました。リストのURLが利用不可になっている可能性があります。');
+    // 最初に読み込めたフレーム以外は破棄する
+    controller.abort();
+    if (session !== this.sessionId) {
+      frame.remove();
+      return;
     }
+    this.elements.area.querySelectorAll('iframe').forEach((other) => { if (other !== frame) other.remove(); });
+    frame.classList.add('active');
+    this.elements.status.hidden = true;
+    this.busy = false;
   },
 
-  probeIframe(url) {
+  /**
+   * URLを最大 PROBE_CONCURRENCY 件まで同時に読み込み、
+   * 最初に load できたフレームを返す。失敗した分は次のURLで補充する。
+   */
+  probeFirstAvailable(urls, signal) {
     return new Promise((resolve, reject) => {
+      let nextIndex = 0;
+      let active = 0;
+      let settled = false;
+
+      const fail = () => {
+        if (settled) return;
+        settled = true;
+        reject(new Error('all probes failed'));
+      };
+
+      const startNext = () => {
+        if (settled) return;
+        if (signal.aborted) { fail(); return; }
+        if (nextIndex >= urls.length) {
+          if (active === 0) fail();
+          return;
+        }
+
+        const index = nextIndex++;
+        active++;
+        this.showStatus('接続中… ' + (index + 1) + ' / ' + urls.length);
+
+        this.probeIframe(urls[index], signal).then(
+          (frame) => {
+            active--;
+            if (settled) { frame.remove(); return; }
+            settled = true;
+            resolve(frame);
+          },
+          () => {
+            active--;
+            startNext();
+          },
+        );
+      };
+
+      if (urls.length === 0) { fail(); return; }
+      const initialCount = Math.min(PROBE_CONCURRENCY, urls.length);
+      for (let i = 0; i < initialCount; i++) startNext();
+    });
+  },
+
+  probeIframe(url, signal) {
+    return new Promise((resolve, reject) => {
+      if (signal && signal.aborted) {
+        reject(new Error('aborted'));
+        return;
+      }
+
       const frame = document.createElement('iframe');
       frame.className = 'probe-frame';
       frame.src = url;
       frame.allow = 'fullscreen; clipboard-read; clipboard-write';
 
       let settled = false;
+      let loadTimer = 0;
+
       const settle = (ok) => {
         if (settled) return;
         settled = true;
+        clearTimeout(loadTimer);
         clearTimeout(timer);
         frame.removeEventListener('load', onLoad);
         frame.removeEventListener('error', onError);
+        if (signal) signal.removeEventListener('abort', onAbort);
         if (ok) {
           resolve(frame);
         } else {
@@ -686,12 +752,17 @@ const Launcher = {
           reject(new Error('load failed: ' + url));
         }
       };
-      const onLoad = () => setTimeout(() => settle(true), 350);
+      const onLoad = () => { loadTimer = setTimeout(() => settle(true), 350); };
       const onError = () => settle(false);
+      const onAbort = () => settle(false);
       const timer = setTimeout(() => settle(false), PROBE_TIMEOUT_MS);
 
       frame.addEventListener('load', onLoad);
       frame.addEventListener('error', onError);
+      if (signal) {
+        signal.addEventListener('abort', onAbort, { once: true });
+        if (signal.aborted) onAbort();
+      }
       this.elements.area.appendChild(frame);
     });
   },
@@ -699,6 +770,7 @@ const Launcher = {
   back() {
     this.sessionId++;
     this.busy = false;
+    if (this.controller) this.controller.abort();
     this.clearFrames();
     UI.showView('menu');
   },
