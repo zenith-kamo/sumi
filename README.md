@@ -26,6 +26,7 @@ src/                        # Development source
 public/                     # Production build
 ├── index.html              # Optimized bootstrap
 ├── liquid-glass.js         # Minified UI library (independent)
+├── single.html             # Self-contained single-file build
 ├── favicon.ico
 ├── favicon.png
 ├── img/                    # Service icons
@@ -41,6 +42,25 @@ link/                       # URL lists served from GitHub Raw / jsDelivr
 build.mjs                   # Build script
 package.json                # Development dependencies
 ```
+
+## ✦ Single-file Build
+
+`public/single.html` は、CSS・JS（Liquid Glass 含む）・アプリ本体・画像をすべて
+1 つの HTML に埋め込んだビルドです。`public/` 配下の他のファイルを参照しないため、
+単体で配布・`file://` で開くこともできます。
+
+```bash
+npm run build        # 画像を Base64 で埋め込む（デフォルト・完全自己完結）
+npm run build:cdn    # 画像を jsDelivr の URL で参照（軽量）
+```
+
+| モード | 目安サイズ | 特徴 |
+|---|---|---|
+| Base64（デフォルト） | 約 400 KB | 完全に 1 ファイルで完結。オフラインでも表示可 |
+| CDN（`--cdn`） | 約 160 KB | 画像のみ jsDelivr から取得。要ネット接続 |
+
+画像は `window.__ASSETS` というグローバル表にまとめ、アプリ側は `__ASSETS['shadow.png']`
+のように参照します。そのため画像データが難読化で肥大化しません。
 
 ## ✦ Core Features
 

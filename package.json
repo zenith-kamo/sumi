@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "build:cdn": "node build.mjs --cdn"
   },
   "devDependencies": {
     "javascript-obfuscator": "^4.2.2",

@@ -35,14 +35,26 @@
     }, wait);
   }
 
+  function decodeApp(base64) {
+    const b64 = base64.trim();
+    if (!/^[A-Za-z0-9+/=\s]+$/.test(b64)) throw new Error('取得したデータがBase64ではありません');
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    return new TextDecoder('utf-8').decode(bytes);
+  }
+
+  async function loadAppHtml() {
+    // singlefile ビルドでは埋め込みデータを使用する
+    const embedded = document.getElementById('app-data');
+    if (embedded && embedded.textContent.trim()) return decodeApp(embedded.textContent);
+
+    const res = await fetch('./obf/index', { cache: 'no-store' });
+    if (!res.ok) throw new Error('サーバー応答 ' + res.status);
+    return decodeApp(await res.text());
+  }
+
   async function boot() {
     try {
-      const res = await fetch('./obf/index', { cache: 'no-store' });
-      if (!res.ok) throw new Error('サーバー応答 ' + res.status);
-      const b64 = (await res.text()).trim();
-      if (!/^[A-Za-z0-9+/=\s]+$/.test(b64)) throw new Error('取得したデータがBase64ではありません');
-      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-      render(new TextDecoder('utf-8').decode(bytes));
+      render(await loadAppHtml());
     } catch (err) {
       fail('起動に失敗しました: ' + (err && err.message ? err.message : err));
     }
