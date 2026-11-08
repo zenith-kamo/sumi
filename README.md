@@ -13,7 +13,7 @@ Sumi は、Shadow / Doge UB / Opium の3つのサービスへシームレスに�
 
 ## ✦ Links
 メイン: [https://sumi-best.surge.sh](https://sumi-best.surge.sh)<br>
-GAS(不安定): [https://script.google.com/macros/s/AKfyc...5frcX/exec](https://script.google.com/macros/s/AKfycbyTMpcyFQSMZr1Kli2sOiDNVyrANVetsLJBaFvIcGOchzVynKvIcdmcBUuhyas5frcX/exec)
+GAS(不安定): [https://script.google.com/macros/s/.../exec](https://script.google.com/macros/s/AKfycbxoNhqZFG8VijxcDpfBxs3DKs525TBersjL5mg1hTKmBxiVyOLywJK1h57DXVRapJXd/exec)
 
 ## ✦ Project Structure
 
