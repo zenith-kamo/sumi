@@ -1,6 +1,6 @@
 # Sumi
 <center>
-<img src="sumi.png" width="90">&emsp;<img src="sumi2.png" width="90">
+<img src="sumi.png" width="90"><img src="sumi2.png" width="90">
 
 — One launcher. Free access. Unblock.
 </center>
@@ -10,6 +10,10 @@
 Sumi は、Shadow / Doge UB / Opium の3つのサービスへシームレスにアクセスするための、モダンなダークテーマのランチャーです。
 
 洗練された UI、動的な URL 解決、軽量なブートストラップ構造を採用。URL リストから利用可能なエンドポイントを自動検出し、最適な接続先を選択してサービスを起動します。
+
+## ✦ Links
+メイン: [https://sumi-best.surge.sh](https://sumi-best.surge.sh)<br>
+GAS(不安定): [https://script.google.com/macros/s/AKfyc...5frcX/exec](https://script.google.com/macros/s/AKfycbyTMpcyFQSMZr1Kli2sOiDNVyrANVetsLJBaFvIcGOchzVynKvIcdmcBUuhyas5frcX/exec)
 
 ## ✦ Project Structure
 
