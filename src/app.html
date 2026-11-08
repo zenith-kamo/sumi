@@ -244,6 +244,23 @@
   .desc { margin-top: 10px; font-size: 0.76rem; line-height: 1.7; color: var(--muted); }
   .desc code { font-family: ui-monospace, monospace; font-size: 0.72rem; color: var(--fg); }
 
+  .field-label { display: block; margin-bottom: 8px; font-size: 0.82rem; font-weight: 500; color: var(--muted); }
+  .field-label.spaced { margin-top: 16px; }
+  .field {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--hairline);
+    color: var(--fg);
+    font: inherit;
+    font-size: 0.92rem;
+  }
+  .field::placeholder { color: var(--muted); }
+  .field:focus { outline: 1px solid var(--fg); outline-offset: 2px; }
+  .upload { width: 100%; margin-top: 12px; }
+
   .toggle {
     position: relative;
     flex: none;
@@ -288,6 +305,15 @@
   .opt:focus-visible { outline: 1px solid var(--fg); outline-offset: -2px; }
   .opt .name { display: block; color: var(--fg); font-size: 0.92rem; font-weight: 500; }
   .opt .sub { display: block; margin-top: 3px; font-size: 0.74rem; }
+  .opt .meta { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .opt .thumb {
+    flex: none;
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  }
   .opt .check {
     flex: none;
     width: 18px; height: 18px;
@@ -401,6 +427,19 @@
       </div>
 
       <div class="group">
+        <div class="group-title">表示</div>
+        <label class="field-label" for="title-input">タイトル</label>
+        <input class="field" id="title-input" type="text" maxlength="60" autocomplete="off" spellcheck="false" placeholder="Google" />
+        <div class="field-label spaced">アイコン</div>
+        <div class="list" id="icon-list" role="radiogroup" aria-label="アイコン"></div>
+        <input type="file" id="icon-file" accept="image/*" hidden />
+        <button class="btn glass press upload" id="btn-upload-icon" type="button">画像をアップロード</button>
+        <p class="desc">
+          プリセットを選ぶとアイコンとタイトルがまとめて変わります。アップロードした画像はこの端末内にのみ保存されます。
+        </p>
+      </div>
+
+      <div class="group">
         <div class="group-title">URLリストの取得先</div>
         <div class="list" id="source-list" role="radiogroup" aria-label="URLリストの取得先"></div>
       </div>
@@ -413,18 +452,36 @@
 <script>
 'use strict';
 
-const APP_HTML = (() => {
+const PRISTINE_DOC = document.documentElement.cloneNode(true);
+
+function buildAppHtml() {
   const baseHref = location.href.replace(/[^/]*$/, '');
-  const html = document.documentElement.outerHTML;
+  const root = PRISTINE_DOC.cloneNode(true);
+  const titleElement = root.querySelector('title');
+  if (titleElement) titleElement.textContent = settings.title || DEFAULT_TITLE;
+  const iconUrl = Appearance.iconUrl();
+  root.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach((link) => {
+    link.setAttribute('href', iconUrl);
+  });
+  const html = root.outerHTML;
   return '<!DOCTYPE html>\n' + html
     .replace('<head>', () => '<head><base href="' + baseHref + '">')
     .replace(/^<html([^>]*)>/, '<html$1 data-cloaked>');
-})();
+}
 
 const SERVICES = [
   { id: 'shadow', name: 'Shadow', icon: './img/shadow.png' },
   { id: 'doge', name: 'Doge UB', icon: './img/doge.png' },
   { id: 'opium', name: 'Opium', icon: './img/opium.png' },
+];
+
+const DEFAULT_TITLE = 'Google';
+const ICON_SIZE = 256;
+
+const APPEARANCE_PRESETS = [
+  { id: 'google', label: 'Google', title: 'Google', icon: './favicon.png', desc: 'Google アイコン + Google' },
+  { id: 'sumi1',  label: 'Sumi 1', title: 'Sumi',   icon: './img/sumi1.png', desc: 'Sumi1 アイコン + Sumi' },
+  { id: 'sumi2',  label: 'Sumi 2', title: 'Sumi',   icon: './img/sumi2.png', desc: 'Sumi2 アイコン + Sumi' },
 ];
 
 const REPO = 'zenith-kamo/sumi';
@@ -457,7 +514,7 @@ const CHECK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 
 const Store = {
   KEY: 'unblock-proxy:settings',
-  defaults: { source: 'auto', cloaking: false },
+  defaults: { source: 'auto', cloaking: false, title: 'Google', icon: 'google', customIcon: '' },
   data: null,
   load() {
     try {
@@ -591,6 +648,186 @@ const SourceList = {
     event.preventDefault();
     this.choose(options[nextIndex].dataset.id);
     options[nextIndex].focus();
+  },
+};
+
+const Appearance = {
+  titleInput: null,
+
+  init() {
+    this.titleInput = $('#title-input');
+    this.titleInput.addEventListener('input', () => this.onTitleInput());
+    this.titleInput.addEventListener('blur', () => this.commitTitle(true));
+    this.titleInput.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      this.commitTitle(true);
+      this.titleInput.blur();
+    });
+    $('#btn-upload-icon').addEventListener('click', () => $('#icon-file').click());
+    $('#icon-file').addEventListener('change', (event) => this.onFile(event));
+    IconList.init();
+    this.apply();
+  },
+
+  preset(id) {
+    return APPEARANCE_PRESETS.find((preset) => preset.id === id) || null;
+  },
+
+  iconUrl() {
+    if (settings.icon === 'custom' && settings.customIcon) return settings.customIcon;
+    return (this.preset(settings.icon) || APPEARANCE_PRESETS[0]).icon;
+  },
+
+  apply() {
+    document.title = settings.title || DEFAULT_TITLE;
+    const iconUrl = this.iconUrl();
+    document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach((link) => {
+      link.setAttribute('href', iconUrl);
+    });
+    if (this.titleInput && document.activeElement !== this.titleInput) {
+      this.titleInput.value = settings.title || '';
+    }
+    IconList.sync();
+  },
+
+  setPreset(id) {
+    const preset = this.preset(id);
+    if (!preset) return;
+    Store.save({ icon: preset.id, title: preset.title });
+    this.apply();
+    this.titleInput.value = preset.title;
+    UI.toast('表示を「' + preset.label + '」に変更しました');
+  },
+
+  onTitleInput() {
+    const title = this.titleInput.value.trim() || DEFAULT_TITLE;
+    Store.save({ title });
+    document.title = title;
+  },
+
+  commitTitle(updateInput) {
+    const title = this.titleInput.value.trim() || DEFAULT_TITLE;
+    Store.save({ title });
+    document.title = title;
+    if (updateInput) this.titleInput.value = title;
+  },
+
+  onFile(event) {
+    const input = event.target;
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+    if (!file.type || !file.type.startsWith('image/')) {
+      UI.toast('画像ファイルを選択してください');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      UI.toast('画像は5MB以下にしてください');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => {
+        if (!image.width || !image.height) {
+          UI.toast('画像を読み込めませんでした');
+          return;
+        }
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = ICON_SIZE;
+          canvas.height = ICON_SIZE;
+          const context = canvas.getContext('2d');
+          if (!context) throw new Error('canvas unavailable');
+          const scale = Math.max(ICON_SIZE / image.width, ICON_SIZE / image.height);
+          const width = image.width * scale;
+          const height = image.height * scale;
+          context.drawImage(image, (ICON_SIZE - width) / 2, (ICON_SIZE - height) / 2, width, height);
+          Store.save({ icon: 'custom', customIcon: canvas.toDataURL('image/png') });
+          this.apply();
+          UI.toast('アイコンを変更しました');
+        } catch {
+          UI.toast('この画像は使用できません');
+        }
+      };
+      image.onerror = () => UI.toast('画像を読み込めませんでした');
+      image.src = reader.result;
+    };
+    reader.onerror = () => UI.toast('画像を読み込めませんでした');
+    reader.readAsDataURL(file);
+  },
+};
+
+const IconList = {
+  element: null,
+
+  init() {
+    this.element = $('#icon-list');
+    for (const preset of APPEARANCE_PRESETS) {
+      this.element.appendChild(this.createOption(preset.id, preset.icon, preset.label, preset.desc));
+    }
+    this.element.appendChild(this.createOption('custom', '', 'カスタム', 'アップロードした画像'));
+    this.element.addEventListener('keydown', (event) => this.handleKey(event));
+    this.sync();
+  },
+
+  createOption(id, icon, label, desc) {
+    const option = document.createElement('button');
+    option.className = 'opt';
+    option.setAttribute('role', 'radio');
+    option.dataset.id = id;
+    option.innerHTML = '<span class="meta"><img class="thumb" alt="" /><span><span class="name"></span><span class="sub"></span></span></span><span class="check">' + CHECK_ICON + '</span>';
+    if (icon) option.querySelector('.thumb').src = icon;
+    option.querySelector('.name').textContent = label;
+    option.querySelector('.sub').textContent = desc;
+    option.addEventListener('click', () => this.choose(id));
+    return option;
+  },
+
+  options() {
+    return Array.from(this.element.querySelectorAll('.opt')).filter((option) => !option.hidden);
+  },
+
+  sync() {
+    const customOption = this.element.querySelector('[data-id="custom"]');
+    const hasCustom = Boolean(settings.customIcon);
+    customOption.hidden = !hasCustom;
+    if (hasCustom) customOption.querySelector('.thumb').src = settings.customIcon;
+
+    const preset = Appearance.preset(settings.icon);
+    const selectedId = hasCustom && settings.icon === 'custom' ? 'custom' : (preset ? preset.id : 'google');
+    for (const option of this.options()) {
+      const isSelected = option.dataset.id === selectedId;
+      option.setAttribute('aria-checked', String(isSelected));
+      option.tabIndex = isSelected ? 0 : -1;
+    }
+  },
+
+  choose(id) {
+    if (id === 'custom') {
+      if (!settings.customIcon) return;
+      Store.save({ icon: 'custom' });
+      Appearance.apply();
+      UI.toast('アイコンを変更しました');
+      return;
+    }
+    Appearance.setPreset(id);
+  },
+
+  handleKey(event) {
+    const options = this.options();
+    const currentIndex = options.findIndex((option) => option.getAttribute('aria-checked') === 'true');
+    let nextIndex = null;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % options.length;
+    if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + options.length) % options.length;
+    if (nextIndex === null) return;
+
+    event.preventDefault();
+    const next = options[nextIndex];
+    this.choose(next.dataset.id);
+    next.focus();
   },
 };
 
@@ -782,7 +1019,7 @@ const Cloak = {
     if (!win) return false;
     try {
       win.document.open();
-      win.document.write(APP_HTML);
+      win.document.write(buildAppHtml());
       win.document.close();
       win.name = '__unblock_proxy_cloaked__';
     } catch {
@@ -823,6 +1060,7 @@ cloakToggle.addEventListener('click', () => {
 const Settings = {
   overlay: $('#settings'),
   open() {
+    Appearance.apply();
     SourceList.sync();
     setCloakUI(settings.cloaking);
     this.overlay.classList.add('open');
@@ -839,6 +1077,7 @@ const Settings = {
 };
 
 function init() {
+  Appearance.init();
   buildMenu();
   SourceList.init();
   Settings.init();

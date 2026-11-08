@@ -2,6 +2,11 @@
 (function () {
   const MIN_LOADING_MS = 3000;
   const SETTINGS_KEY = 'unblock-proxy:settings';
+  const PRESET_ICONS = {
+    google: './favicon.png',
+    sumi1: './img/sumi1.png',
+    sumi2: './img/sumi2.png',
+  };
   const startedAt = Date.now();
 
   const orb = document.getElementById('orb');
@@ -140,5 +145,23 @@
     boot();
   }
 
+  /** 保存されたタイトル・アイコンを起動画面にも反映する */
+  function applyAppearance() {
+    let saved;
+    try {
+      saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    } catch {
+      return;
+    }
+    document.title = typeof saved.title === 'string' && saved.title.trim() ? saved.title.trim() : 'Google';
+    const icon = saved.icon === 'custom' && typeof saved.customIcon === 'string' && saved.customIcon
+      ? saved.customIcon
+      : PRESET_ICONS[saved.icon] || PRESET_ICONS.google;
+    document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach((link) => {
+      link.setAttribute('href', icon);
+    });
+  }
+
+  applyAppearance();
   start();
 })();
